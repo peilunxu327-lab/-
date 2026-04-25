@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>居住空間情境翻牌遊戲</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr); /* 4x4 grid */
+            gap: 15px;
+            max-width: 900px;
+            width: 100%;
+            margin-bottom: 30px;
+        }
+
+        .grid-item {
+            background-color: #ffffff;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            height: 180px; /* Fixed height for consistency */
+            position: relative;
+            overflow: hidden; /* Hide overflowing content initially */
+        }
+
+        .grid-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .grid-item .front, .grid-item .back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            backface-visibility: hidden;
+            transition: opacity 0.3s ease;
+            padding: 10px;
+            box-sizing: border-box;
+            word-break: break-word; /* Ensure long words break */
+        }
+
+        .grid-item .front {
+            font-size: 3em;
+            font-weight: bold;
+            color: #4CAF50; /* Green for numbers */
+            opacity: 1;
+        }
+
+        .grid-item .back {
+            opacity: 0;
+            transform: rotateY(180deg); /* Start rotated for flip effect */
+            color: #555;
+            font-size: 0.9em;
+            text-align: left;
+            justify-content: flex-start; /* Align content to top-left */
+            padding-top: 20px;
+            line-height: 1.4;
+        }
+
+        .grid-item.revealed .front {
+            opacity: 0;
+        }
+
+        .grid-item.revealed .back {
+            opacity: 1;
+            transform: rotateY(0deg); /* Show content */
+            overflow-y: auto; /* Allow scrolling for long content */
+        }
+
+        .grid-item .back h3 {
+            margin-top: 0;
+            font-size: 1.1em;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .grid-item .back p {
+            margin-bottom: 5px;
+        }
+
+        .grid-item .back .situation {
+            font-size: 0.85em;
+            color: #666;
+        }
+
+        .grid-item .back .action {
+            font-weight: bold;
+            color: #007bff; /* Blue for action */
+        }
+
+        .reset-button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 1.1em;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            box-shadow: 0 4px 6px rgba(0, 123, 255, 0.2);
+        }
+
+        .reset-button:hover {
+            background-color: #0056b3;
+            transform: translateY(-2px);
+        }
+
+        @media (max-width: 768px) {
+            .grid-container {
+                grid-template-columns: repeat(2, 1fr); /* 2x8 grid on smaller screens */
+            }
+            .grid-item {
+                height: 200px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .grid-container {
+                grid-template-columns: 1fr; /* 1x16 grid on very small screens */
+            }
+            .grid-item {
+                height: 220px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>居住空間情境翻牌遊戲</h1>
+    <div class="grid-container" id="gameGrid">
+        <!-- Grid items will be injected here by JavaScript -->
+    </div>
+    <button class="reset-button" id="resetButton">重整並隨機洗牌</button>
+
+    <script>
+        const scenarios = [
+            {
+                "id": 1,
+                "category": "空間縮減",
+                "title": "【地理】士紳化來襲 (Gentrification)",
+                "situation": "你住的老社區進駐了許多文青咖啡廳與精品店，地價與租金飆漲，房東決定漲你租金。",
+                "action": "負擔不起大空間，報紙對折一次。"
+            },
+            {
+                "id": 2,
+                "category": "空間縮減",
+                "title": "【公民】區段徵收 / 土地徵收",
+                "situation": "政府為了蓋新的科學園區，徵收了你租屋處所在的土地，你被迫在短時間內搬家。",
+                "action": "居住權受損，報紙對折一次。"
+            },
+            {
+                "id": 3,
+                "category": "空間縮減",
+                "title": "【地理】CBD（中心商業區）擴張",
+                "situation": "根據「競租理論」，商業區的付租能力最強。辦公大樓不斷擴建，擠壓了住宅區的空間。",
+                "action": "邊緣化效應，報紙折起 1/4。"
+            },
+            {
+                "id": 4,
+                "category": "空間縮減",
+                "title": "【公民】租屋黑市與惡房東",
+                "situation": "因為租屋市場不透明，房東不僅超收電費，還違法將房子隔成許多小套房（頂加/劏房）出租。",
+                "action": "居住品質極度壓縮，報紙對折一次。"
+            },
+            {
+                "id": 5,
+                "category": "空間縮減",
+                "title": "【公民】鄰避效應 (NIMBY) 的犧牲者",
+                "situation": "附近居民抗議「變電所」與「垃圾焚化爐」，最終這些設施被蓋在你家這個相對弱勢的社區旁，生活環境惡化。",
+                "action": "環境權受損，報紙折起 1/4。"
+            },
+            {
+                "id": 6,
+                "category": "空間縮減",
+                "title": "【地理】極端氣候的空間反撲",
+                "situation": "都市高度水泥化導致「都市熱島效應」與極端強降雨。你租的地下室/低窪地區淹水了。",
+                "action": "災難導致部分空間無法使用，報紙折起 1/4。"
+            },
+            {
+                "id": 7,
+                "category": "空間縮減",
+                "title": "【跨科】囤房與炒作",
+                "situation": "投資客大量買房卻空置不租，導致市場上供給減少，租金持續攀升，你只能越搬越小。",
+                "action": "報紙對折一次。"
+            },
+            {
+                "id": 8,
+                "category": "空間增加",
+                "title": "【公民】幸運中籤！入住社會住宅",
+                "situation": "國家為了保障「適足居住權」，提供只租不售的社會住宅，你幸運抽中了！",
+                "action": "獲得穩定且負擔得起的空間，報紙完全攤開（滿血復活）！"
+            },
+            {
+                "id": 9,
+                "category": "空間增加",
+                "title": "【地理】交通建設（捷運/輕軌）開通",
+                "situation": "點對點的交通易達性提高，縮短了通勤時間，讓你有意願搬到空間更大、租金更便宜的市郊。",
+                "action": "交通換取空間，報紙攤開一次。"
+            },
+            {
+                "id": 10,
+                "category": "空間增加",
+                "title": "【公民】租金補貼政策上路",
+                "situation": "政府發放青年租金補貼，減輕了你的財務壓力，讓你得以租下多一個房間的公寓。",
+                "action": "報紙攤開一次。"
+            },
+            {
+                "id": 11,
+                "category": "空間增加",
+                "title": "【地理】棕地活化 (Brownfield Redevelopment)",
+                "situation": "城市邊緣廢棄的舊工業區被政府重新整治，規劃為新的住宅區與公園，釋出更多居住空間。",
+                "action": "城市空間再生，報紙攤開一次。"
+            },
+            {
+                "id": 12,
+                "category": "空間增加",
+                "title": "【公民】囤房稅 / 空屋稅實施",
+                "situation": "政府透過稅賦政策，逼迫投資客將空屋釋出到租屋市場。供給增加，租金下跌。",
+                "action": "居住正義伸張，報紙攤開一次。"
+            },
+            {
+                "id": 13,
+                "category": "空間增加",
+                "title": "【跨科】社區營造大成功",
+                "situation": "透過由下而上的公民參與，你們社區將原本的廢棄畸零地改造成了充滿綠意的社區口袋公園。",
+                "action": "獲得共享的公共空間，報紙折起的部分可攤開 1/4。"
+            },
+            {
+                "id": 14,
+                "category": "互動與抉擇",
+                "title": "【地理】郊區化 (Suburbanization) 的代價",
+                "situation": "市區太貴，你決定搬到遙遠的郊區居住。房子變大了，但每天通勤超痛苦。",
+                "action": "空間變大（報紙攤開一次），但全組必須「單腳金雞獨立 5 秒」來模擬搭滿員電車通勤的辛勞。"
+            },
+            {
+                "id": 15,
+                "category": "互動與抉擇",
+                "title": "【公民】召開公聽會（辯論爭取）",
+                "situation": "面臨都市更新，你決定組織自救會發聲。",
+                "action": "選擇現場另一組進行「猜拳」或「說服」。贏家可讓報紙攤開一次，輸家必須折起 1/4。"
+            },
+            {
+                "id": 16,
+                "category": "互動與抉擇",
+                "title": "【命運】都市計畫變更",
+                "situation": "你的命運掌握在都市計畫委員會手裡。",
+                "action": "擲骰子決定。單數：住宅區變商業區，被迫搬離（對折）；雙數：工業區變更為住宅區，獲得空間（攤開）。"
+            }
+        ];
+
+        const gameGrid = document.getElementById('gameGrid');
+        const resetButton = document.getElementById('resetButton');
+        let shuffledScenarios = [];
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]]; // Swap elements
+            }
+            return array;
+        }
+
+        function renderGrid() {
+            gameGrid.innerHTML = ''; // Clear existing grid
+            shuffledScenarios = shuffleArray([...scenarios]); // Create a shallow copy and shuffle
+
+            shuffledScenarios.forEach((scenario, index) => {
+                const gridItem = document.createElement('div');
+                gridItem.classList.add('grid-item');
+                gridItem.dataset.id = scenario.id; // Store original ID for reference
+
+                gridItem.innerHTML = `
+                    <div class="front">${index + 1}</div>
+                    <div class="back">
+                        <h3>${scenario.title}</h3>
+                        <p class="situation">情境：${scenario.situation}</p>
+                        <p class="action">動作：${scenario.action}</p>
+                    </div>
+                `;
+
+                gridItem.addEventListener('click', () => {
+                    gridItem.classList.toggle('revealed');
+                });
+                gameGrid.appendChild(gridItem);
+            });
+        }
+
+        resetButton.addEventListener('click', renderGrid);
+
+        // Initial render when the page loads
+        document.addEventListener('DOMContentLoaded', renderGrid);
+    </script>
+</body>
+</html>
